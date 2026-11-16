@@ -1,0 +1,37 @@
+services:
+  - type: web
+    name: finflow-api
+    runtime: node
+    region: singapore
+    plan: free
+    buildCommand: npm install && npm run build --workspace backend
+    startCommand: npm run start --workspace backend
+    healthCheckPath: /api/health
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: CLIENT_URL
+        sync: false
+      - key: REMINDER_CRON
+        value: "0 9 * * *"
+      - key: REMINDER_TIMEZONE
+        value: Asia/Kolkata
+
+  - type: web
+    name: finflow-web
+    runtime: static
+    buildCommand: npm install && npm run build --workspace frontend
+    staticPublishPath: frontend/dist
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: VITE_API_URL
+        sync: false
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
