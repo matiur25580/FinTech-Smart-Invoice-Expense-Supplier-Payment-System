@@ -35,7 +35,7 @@ Supplier account linking must be provisioned securely; full edit/delete CRUD, in
 ## Roadmap
 - [x] Core API, authentication, finance models and transactional payment endpoints
 - [x] Live frontend auth, dashboard, searchable lists, create forms and payment/approval actions
-- [ ] Full edit/delete CRUD and supplier account linking/self-service
+- [x] Live frontend integration (PR #1; awaiting successful CI)\n- [ ] Full edit/delete CRUD and supplier account linking/self-service
 - [ ] PDF invoices, email and scheduled due reminders
 - [ ] Token rotation/revocation and secure token storage
-- [ ] Automated tests, CI verification and deployment
+- [ ] Automated backend tests and passing CI verification\n- [ ] Deployment configuration and production rollout
