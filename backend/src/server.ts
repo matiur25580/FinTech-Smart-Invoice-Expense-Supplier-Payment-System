@@ -7,8 +7,11 @@ import mongoose, { Schema } from "mongoose";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
+import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import nodemailer from "nodemailer";
+import cron from "node-cron";
 
-const env=z.object({PORT:z.coerce.number().default(4000),MONGODB_URI:z.string().min(1),JWT_ACCESS_SECRET:z.string().min(32),JWT_REFRESH_SECRET:z.string().min(32),CLIENT_URL:z.string().url().default("http://localhost:5173")}).parse(process.env);
+const env=z.object({PORT:z.coerce.number().default(4000),MONGODB_URI:z.string().min(1),JWT_ACCESS_SECRET:z.string().min(32),JWT_REFRESH_SECRET:z.string().min(32),CLIENT_URL:z.string().url().default("http://localhost:5173"),SMTP_HOST:z.string().optional(),SMTP_PORT:z.coerce.number().default(587),SMTP_SECURE:z.enum(["true","false"]).default("false").transform(v=>v==="true"),SMTP_USER:z.string().optional(),SMTP_PASS:z.string().optional(),SMTP_FROM:z.string().default("FinFlow <no-reply@example.com>"),REMINDER_CRON:z.string().default("0 9 * * *"),REMINDER_TIMEZONE:z.string().default("Asia/Kolkata")}).parse(process.env);
 const app=express(); app.use(helmet()); app.use(cors({origin:env.CLIENT_URL,credentials:true})); app.use(express.json({limit:"1mb"})); app.use("/api",rateLimit({windowMs:900000,limit:300}));
 const User=mongoose.model("User",new Schema({name:{type:String,required:true},email:{type:String,unique:true,lowercase:true},passwordHash:{type:String,required:true,select:false},role:{type:String,enum:["admin","accountant","supplier","employee"],default:"employee"},supplierId:Schema.Types.ObjectId,isActive:{type:Boolean,default:true}},{timestamps:true}));
 const Client=mongoose.model("Client",new Schema({name:{type:String,required:true},email:String,phone:String,address:String,createdBy:Schema.Types.ObjectId},{timestamps:true}));
@@ -19,6 +22,8 @@ const SupplierBill=mongoose.model("SupplierBill",new Schema({billNo:{type:String
 const SupplierPayment=mongoose.model("SupplierPayment",new Schema({supplierBillId:{type:Schema.Types.ObjectId,ref:"SupplierBill",required:true,index:true},supplierId:{type:Schema.Types.ObjectId,ref:"Supplier",required:true},amountPaise:{type:Number,required:true,min:1},method:String,reference:String,paidAt:{type:Date,default:Date.now},recordedBy:Schema.Types.ObjectId},{timestamps:true}));
 const Expense=mongoose.model("Expense",new Schema({title:String,amountPaise:Number,category:String,expenseDate:Date,description:String,status:{type:String,enum:["pending","approved","rejected"],default:"pending"},submittedBy:Schema.Types.ObjectId,reviewedBy:Schema.Types.ObjectId},{timestamps:true}));
 const AuditLog=mongoose.model("AuditLog",new Schema({userId:Schema.Types.ObjectId,action:String,entityType:String,entityId:Schema.Types.ObjectId,oldValue:Schema.Types.Mixed,newValue:Schema.Types.Mixed,ipAddress:String},{timestamps:{createdAt:true,updatedAt:false}}));
+const ReminderLogSchema=new Schema({invoiceId:{type:Schema.Types.ObjectId,required:true,ref:"Invoice"},reminderDate:{type:String,required:true},recipient:{type:String,required:true},sentAt:{type:Date,default:Date.now}});ReminderLogSchema.index({invoiceId:1,reminderDate:1},{unique:true});const ReminderLog=mongoose.model("ReminderLog",ReminderLogSchema);
+const mailer=env.SMTP_HOST?nodemailer.createTransport({host:env.SMTP_HOST,port:env.SMTP_PORT,secure:env.SMTP_SECURE,auth:env.SMTP_USER&&env.SMTP_PASS?{user:env.SMTP_USER,pass:env.SMTP_PASS}:undefined}):null;
 type Role="admin"|"accountant"|"supplier"|"employee";
 type AuthedRequest=Request&{auth?:{userId:string;role:Role;supplierId?:string}};
 const asyncRoute=(fn:(req:AuthedRequest,res:Response,next:NextFunction)=>Promise<unknown>)=>(req:Request,res:Response,next:NextFunction)=>Promise.resolve(fn(req as AuthedRequest,res,next)).catch(next);
@@ -27,6 +32,30 @@ const auth=asyncRoute(async(req,res,next)=>{const h=req.headers.authorization;if
 const roles=(...allowed:Role[])=>(req:Request,res:Response,next:NextFunction)=>{if(!(req as AuthedRequest).auth||!allowed.includes((req as AuthedRequest).auth!.role))return res.status(403).json({message:"Insufficient permissions"});next();};
 const paise=(amount:number)=>{if(!Number.isFinite(amount)||amount<0)throw new Error("Invalid amount");return Math.round((amount+Number.EPSILON)*100);};
 const rupees=(amount:number|null|undefined)=>Number(((amount??0)/100).toFixed(2));
+
+function pdfSafe(value:unknown){return String(value??"").normalize("NFKD").replace(/[^\x20-\x7E]/g,"?").slice(0,110);}
+function invoiceMoney(amountPaise:number){return "INR "+(Number(amountPaise??0)/100).toLocaleString("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2});}
+async function buildInvoicePdf(invoice:any,client:any){
+ const doc=await PDFDocument.create(),font=await doc.embedFont(StandardFonts.Helvetica),bold=await doc.embedFont(StandardFonts.HelveticaBold);
+ let page=doc.addPage([595.28,841.89]),y=790;
+ const write=(value:string,x:number,yy:number,size=10,strong=false)=>page.drawText(pdfSafe(value),{x,y:yy,size,font:strong?bold:font,color:rgb(.16,.19,.27)});
+ write("FINFLOW",44,y,22,true);write("SALES INVOICE",390,y,14,true);y-=34;
+ write("Invoice: "+invoice.invoiceNo,44,y,11,true);write("Date: "+new Date(invoice.createdAt??Date.now()).toLocaleDateString("en-IN"),390,y,10);y-=22;
+ write("Bill to",44,y,10,true);y-=17;write(client?.name??"Client",44,y,11,true);y-=15;
+ if(client?.email){write(client.email,44,y,9);y-=14;}if(client?.address){write(client.address,44,y,9);y-=14;}
+ write("Due date: "+(invoice.dueDate?new Date(invoice.dueDate).toLocaleDateString("en-IN"):"Not specified"),390,y+25,9);y-=24;
+ page.drawLine({start:{x:44,y},end:{x:551,y},thickness:1,color:rgb(.85,.87,.9)});y-=24;
+ write("DESCRIPTION",44,y,9,true);write("QTY",340,y,9,true);write("UNIT PRICE",390,y,9,true);write("AMOUNT",490,y,9,true);y-=18;
+ for(const raw of (Array.isArray(invoice.items)?invoice.items:[])){const item=raw as Record<string,unknown>;if(y<90){page=doc.addPage([595.28,841.89]);y=790;}const qty=Number(item.quantity??0),unit=Number(item.unitPricePaise??Math.round(Number(item.unitPrice??0)*100)),line=Number(item.lineTotalPaise??Math.round(qty*unit));write(String(item.description??"Item").slice(0,48),44,y,9);write(String(qty),340,y,9);write(invoiceMoney(unit),390,y,9);write(invoiceMoney(line),490,y,9);y-=21;}
+ y-=10;page.drawLine({start:{x:330,y},end:{x:551,y},thickness:1,color:rgb(.85,.87,.9)});y-=22;
+ write("Subtotal",365,y,9);write(invoiceMoney(Number(invoice.subtotalPaise??0)),490,y,9);y-=18;
+ write("Discount",365,y,9);write(invoiceMoney(Number(invoice.discountPaise??0)),490,y,9);y-=18;
+ write("Tax",365,y,9);write(invoiceMoney(Number(invoice.taxPaise??0)),490,y,9);y-=22;
+ write("TOTAL",365,y,11,true);write(invoiceMoney(Number(invoice.totalPaise??0)),490,y,11,true);y-=22;
+ write("Paid: "+invoiceMoney(Number(invoice.paidPaise??0)),365,y,9);y-=17;write("Balance due: "+invoiceMoney(Number(invoice.duePaise??0)),365,y,10,true);
+ write("Thank you for your business.",44,52,9);write("Generated by FinFlow",420,52,8);return await doc.save();
+}
+
 app.get("/api/health",(_req,res)=>res.json({status:"ok",service:"fintech-api"}));
 app.post("/api/auth/register",asyncRoute(async(req,res)=>{const x=z.object({name:z.string().min(2),email:z.string().email(),password:z.string().min(10)}).parse(req.body);if(await User.exists({email:x.email.toLowerCase()}))return res.status(409).json({message:"Email already registered"});const u=await User.create({name:x.name,email:x.email,passwordHash:await bcrypt.hash(x.password,12),role:"employee"});res.status(201).json({user:{id:u.id,name:u.name,email:u.email,role:u.role},...issueTokens({id:u.id,role:u.role})});}));
 app.post("/api/auth/login",asyncRoute(async(req,res)=>{const x=z.object({email:z.string().email(),password:z.string().min(1)}).parse(req.body);const u=await User.findOne({email:x.email.toLowerCase()}).select("+passwordHash");if(!u||!u.isActive||!await bcrypt.compare(x.password,u.passwordHash))return res.status(401).json({message:"Invalid email or password"});res.json({user:{id:u.id,name:u.name,email:u.email,role:u.role},...issueTokens({id:u.id,role:u.role})});}));
@@ -65,8 +94,24 @@ app.delete("/api/invoices/:id",auth,roles("admin","accountant"),asyncRoute(async
 app.patch("/api/supplier-bills/:id",auth,roles("admin","accountant"),asyncRoute(async(req,res)=>{const id=objectId.parse(req.params.id);const x=z.object({description:z.string().min(2).max(500),amount:z.number().positive(),taxAmount:z.number().nonnegative(),dueDate:z.string().optional()}).strict().parse(req.body);const bill=await SupplierBill.findById(id);if(!bill)return res.status(404).json({message:"Supplier bill not found"});if(Number(bill.paidPaise??0)>0||await SupplierPayment.exists({supplierBillId:id}))return res.status(409).json({message:"Supplier bills with payments cannot be edited"});const subtotal=paise(x.amount),tax=paise(x.taxAmount),total=subtotal+tax;const before={description:bill.description,subtotalPaise:bill.subtotalPaise,taxPaise:bill.taxPaise,totalPaise:bill.totalPaise,dueDate:bill.dueDate};bill.description=x.description;bill.subtotalPaise=subtotal;bill.taxPaise=tax;bill.totalPaise=total;bill.duePaise=total;bill.status="due";bill.dueDate=x.dueDate?new Date(x.dueDate):undefined;await bill.save();await AuditLog.create({userId:req.auth!.userId,action:"supplier_bill.updated",entityType:"supplier_bill",entityId:bill._id,oldValue:before,newValue:{description:bill.description,subtotalPaise:subtotal,taxPaise:tax,totalPaise:total,dueDate:bill.dueDate}});res.json(bill);}));
 app.delete("/api/supplier-bills/:id",auth,roles("admin","accountant"),asyncRoute(async(req,res)=>{const id=objectId.parse(req.params.id);const bill=await SupplierBill.findById(id);if(!bill)return res.status(404).json({message:"Supplier bill not found"});if(Number(bill.paidPaise??0)>0||await SupplierPayment.exists({supplierBillId:id}))return res.status(409).json({message:"Supplier bills with payments cannot be deleted"});await SupplierBill.deleteOne({_id:id});await AuditLog.create({userId:req.auth!.userId,action:"supplier_bill.deleted",entityType:"supplier_bill",entityId:id,oldValue:{billNo:bill.billNo,totalPaise:bill.totalPaise}});res.json({success:true});}));
 
+
+app.get("/api/invoices/:id/pdf",auth,roles("admin","accountant"),asyncRoute(async(req,res)=>{const id=objectId.parse(req.params.id);const invoice=await Invoice.findById(id);if(!invoice)return res.status(404).json({message:"Invoice not found"});const client=await Client.findById(invoice.clientId);const pdf=await buildInvoicePdf(invoice,client);res.setHeader("Content-Type","application/pdf");res.setHeader("Content-Disposition",'attachment; filename="'+pdfSafe(invoice.invoiceNo||"invoice")+'.pdf"');res.send(Buffer.from(pdf));}));
+app.post("/api/invoices/:id/email",auth,roles("admin","accountant"),asyncRoute(async(req,res)=>{if(!mailer)return res.status(503).json({message:"Email is not configured. Set the SMTP environment variables first."});const id=objectId.parse(req.params.id);const invoice=await Invoice.findById(id);if(!invoice)return res.status(404).json({message:"Invoice not found"});const client=await Client.findById(invoice.clientId);if(!client?.email)return res.status(422).json({message:"Add an email address to this invoice's client record before sending"});const pdf=await buildInvoicePdf(invoice,client);await mailer.sendMail({from:env.SMTP_FROM,to:client.email,subject:"Invoice "+invoice.invoiceNo+" from FinFlow",text:"Hello "+(client.name??"there")+",\n\nPlease find your invoice attached. Outstanding balance: "+invoiceMoney(Number(invoice.duePaise??0))+".\n\nThank you.",attachments:[{filename:(invoice.invoiceNo||"invoice")+".pdf",content:Buffer.from(pdf),contentType:"application/pdf"}]});await AuditLog.create({userId:req.auth!.userId,action:"invoice.emailed",entityType:"invoice",entityId:invoice._id,newValue:{recipient:client.email}});res.json({sent:true,to:client.email});}));
+
 app.get("/api/dashboard",auth,roles("admin","accountant"),asyncRoute(async(_req,res)=>{const month=new Date();month.setDate(1);month.setHours(0,0,0,0);const [inv,exp,pay,recent]=await Promise.all([Invoice.aggregate([{$group:{_id:null,receivable:{$sum:"$duePaise"},invoiced:{$sum:"$totalPaise"}}}]),Expense.aggregate([{$match:{status:"approved",expenseDate:{$gte:month}}},{$group:{_id:null,total:{$sum:"$amountPaise"}}}]),Payment.aggregate([{$match:{receivedAt:{$gte:month}}},{$group:{_id:null,total:{$sum:"$amountPaise"}}}]),Invoice.find().sort({createdAt:-1}).limit(5)]);res.json({receivable:rupees(inv[0]?.receivable??0),totalInvoiced:rupees(inv[0]?.invoiced??0),expensesThisMonth:rupees(exp[0]?.total??0),receivedThisMonth:rupees(pay[0]?.total??0),recentInvoices:recent});}));
 app.get("/api/audit-logs",auth,roles("admin","accountant"),asyncRoute(async(req,res)=>res.json(await AuditLog.find().sort({createdAt:-1}).limit(Math.min(Number(req.query.limit)||50,200)))));
+
+async function sendOverdueInvoiceReminders(){
+ if(!mailer)return;const now=new Date(),reminderDate=new Intl.DateTimeFormat("en-CA",{timeZone:env.REMINDER_TIMEZONE,year:"numeric",month:"2-digit",day:"2-digit"}).format(now);
+ const overdue=await Invoice.find({duePaise:{$gt:0},dueDate:{$lte:now}}).limit(250);
+ for(const invoice of overdue){const client=await Client.findById(invoice.clientId);if(!client?.email)continue;let reservation:any;
+  try{reservation=await ReminderLog.create({invoiceId:invoice._id,reminderDate,recipient:client.email});}catch(error){if((error as {code?:number}).code===11000)continue;throw error;}
+  try{const pdf=await buildInvoicePdf(invoice,client);await mailer.sendMail({from:env.SMTP_FROM,to:client.email,subject:"Payment reminder: invoice "+invoice.invoiceNo,text:"Hello "+(client.name??"there")+",\n\nThis is a friendly reminder that invoice "+invoice.invoiceNo+" is overdue. Outstanding balance: "+invoiceMoney(Number(invoice.duePaise??0))+". Please see the attached invoice.\n\nThank you.",attachments:[{filename:(invoice.invoiceNo||"invoice")+".pdf",content:Buffer.from(pdf),contentType:"application/pdf"}]});await AuditLog.create({action:"invoice.overdue_reminder_sent",entityType:"invoice",entityId:invoice._id,newValue:{recipient:client.email,reminderDate}});}
+  catch(error){await ReminderLog.deleteOne({_id:reservation._id});console.error("Unable to send invoice reminder for "+invoice.invoiceNo,error);}
+ }
+}
+cron.schedule(env.REMINDER_CRON,()=>{void sendOverdueInvoiceReminders().catch(error=>console.error("Overdue reminder job failed",error));},{timezone:env.REMINDER_TIMEZONE});
+
 app.use((_req,res)=>res.status(404).json({message:"Route not found"}));
 app.use((err:Error&{status?:number},_req:Request,res:Response,_next:NextFunction)=>{console.error(err);res.status(err.status??(err instanceof z.ZodError?400:500)).json({message:err instanceof z.ZodError?"Validation failed":err.status?err.message:"Internal server error",...(err instanceof z.ZodError?{errors:err.issues}:{})});});
 mongoose.connect(env.MONGODB_URI).then(()=>app.listen(env.PORT,()=>console.log("FinTech API running on "+env.PORT))).catch(err=>{console.error("Database connection failed",err);process.exit(1);});
