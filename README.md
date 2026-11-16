@@ -21,6 +21,7 @@ Includes login/register, role-aware navigation, live dashboard aggregates, searc
 ## API
 - POST /api/auth/register, /api/auth/login, POST /api/auth/refresh
 - GET/POST /api/clients and GET/POST /api/suppliers
+- POST /api/suppliers/:id/portal-account (Admin only; creates a linked supplier login)
 - GET/POST /api/invoices; POST /api/invoices/:id/payments
 - GET/POST /api/expenses; PATCH /api/expenses/:id/review
 - GET /api/dashboard; GET /api/audit-logs
@@ -30,12 +31,13 @@ Includes login/register, role-aware navigation, live dashboard aggregates, searc
 Money is stored as integer paise. Invoice tax and discount are calculated server-side (discount before tax). Payment, balance update and audit entry use MongoDB transactions. Overpayments are rejected. Public registration cannot assign privileged roles.
 
 ## Limitations / production work
-Supplier account linking must be provisioned securely; full edit/delete CRUD, invoice PDF/email, due reminders, refresh-token rotation/revocation, secure token storage, complete automated API tests and production deployment remain unfinished. The current frontend stores tokens in localStorage and is a development foundation, not production-hardened. This is not certified accounting or tax software.
+Full edit/delete CRUD, invoice PDF/email, due reminders, refresh-token rotation/revocation, secure token storage, complete automated API tests and production deployment remain unfinished. The current frontend stores tokens in localStorage and is a development foundation, not production-hardened. This is not certified accounting or tax software.
 
 ## Roadmap
 - [x] Core API, authentication, finance models and transactional payment endpoints
 - [x] Live frontend auth, dashboard, searchable lists, create forms and payment/approval actions
-- [x] Live frontend integration (PR #1; awaiting successful CI)\n- [ ] Full edit/delete CRUD and supplier account linking/self-service
+- [x] Live frontend integration (PR #1)\n- [x] Admin-provisioned supplier portal login with supplier-scoped bill listing\n- [ ] Full edit/delete CRUD
 - [ ] PDF invoices, email and scheduled due reminders
 - [ ] Token rotation/revocation and secure token storage
-- [ ] Automated backend tests and passing CI verification\n- [ ] Deployment configuration and production rollout
+- [ ] Automated backend tests and CI verification
+- [ ] Deployment configuration and production rollout
