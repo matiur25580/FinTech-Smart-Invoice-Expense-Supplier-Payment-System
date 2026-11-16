@@ -6,41 +6,36 @@ A finance operations platform for small businesses. **This is accounting softwar
 - Frontend: React 18, Vite, TypeScript, Recharts, Lucide
 - Backend: Node.js, Express, TypeScript, Zod, JWT, bcrypt
 - Database: MongoDB Atlas + Mongoose
-- Security: Helmet, CORS, rate limiting, role middleware
 - Hosting target: Vercel (frontend), Render (API), MongoDB Atlas
 
 ## Run locally
 1. Install Node.js 20+ and MongoDB. MongoDB must run as a replica set for payment transactions.
-2. Copy `backend/.env.example` to `backend/.env`; set a MongoDB URI and two independent JWT secrets of at least 32 characters.
-3. Run `npm install` at repository root.
-4. Run `npm run dev`.
-5. Frontend runs at Vite's local URL; API health is at `http://localhost:4000/api/health`.
+2. Copy `backend/.env.example` to `backend/.env`; configure MongoDB and two independent JWT secrets of at least 32 characters.
+3. Run `npm install` at repository root, then `npm run dev`.
+4. API health: `http://localhost:4000/api/health`.
+5. For a hosted API, set frontend `VITE_API_URL` to its origin (without a trailing slash).
 
-## API currently included
-- POST /api/auth/register — public registration always creates Employee
-- POST /api/auth/login and POST /api/auth/refresh
-- GET/POST /api/clients and GET/POST /api/suppliers (Admin/Accountant)
-- GET/POST /api/invoices (Admin/Accountant)
-- POST /api/invoices/:id/payments (transactional receipt and balance update)
+## Frontend integration
+Includes login/register, role-aware navigation, live dashboard aggregates, searchable finance lists, client/supplier/expense/invoice/supplier-bill forms, expense approvals, and customer/supplier payment actions. Registration creates an Employee account; elevated roles must be granted by an administrator. The app uses the existing API endpoints and requires a running backend.
+
+## API
+- POST /api/auth/register, /api/auth/login, POST /api/auth/refresh
+- GET/POST /api/clients and GET/POST /api/suppliers
+- GET/POST /api/invoices; POST /api/invoices/:id/payments
 - GET/POST /api/expenses; PATCH /api/expenses/:id/review
 - GET /api/dashboard; GET /api/audit-logs
+- GET/POST /api/supplier-bills; POST /api/supplier-bills/:id/payments
 
 ## Financial integrity
-All money is stored as integer paise and converted for display. Tax and discount are calculated on the server; this implementation applies discount before tax. Payment creation, invoice balance update and audit entry run inside one MongoDB transaction. A payment greater than the outstanding balance is rejected. Public registration cannot assign privileged roles.
+Money is stored as integer paise. Invoice tax and discount are calculated server-side (discount before tax). Payment, balance update and audit entry use MongoDB transactions. Overpayments are rejected. Public registration cannot assign privileged roles.
 
-## Roles
-Admin and Accountant manage finance records. Employees submit expenses and see only their own. Supplier portal and supplier bill/payment workflows are next in the roadmap; sales invoices are not exposed to supplier accounts.
+## Limitations / production work
+Supplier account linking must be provisioned securely; full edit/delete CRUD, invoice PDF/email, due reminders, refresh-token rotation/revocation, secure token storage, complete automated API tests and production deployment remain unfinished. The current frontend stores tokens in localStorage and is a development foundation, not production-hardened. This is not certified accounting or tax software.
 
 ## Roadmap
-- [x] Repository and responsive dashboard foundation
-- [x] API bootstrap, authentication, role middleware and core data models
-- [x] Client/supplier creation and listing endpoints
-- [x] Invoice calculation and transactional payment recording
-- [x] Expense submission/review, dashboard aggregates and audit endpoint
-- [x] Supplier bill creation/listing and transactional supplier payments
-- [ ] Full CRUD screens and supplier self-service portal
-- [ ] PDF invoices, email delivery and scheduled due reminders
-- [ ] Refresh token rotation/revocation, automated tests, CI and deployment
-
-## Production checklist
-Do not commit secrets. Configure HTTPS, refresh-token rotation/revocation, strict resource ownership checks, backups, monitoring and a replica-set database. Dashboard values are illustrative demo data until wired to the API. This is a development project, not certified accounting or tax software.
+- [x] Core API, authentication, finance models and transactional payment endpoints
+- [x] Live frontend auth, dashboard, searchable lists, create forms and payment/approval actions
+- [x] Live frontend integration (PR #1; awaiting successful CI)\n- [ ] Full edit/delete CRUD and supplier account linking/self-service
+- [ ] PDF invoices, email and scheduled due reminders
+- [ ] Token rotation/revocation and secure token storage
+- [ ] Automated backend tests and passing CI verification\n- [ ] Deployment configuration and production rollout
