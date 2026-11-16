@@ -4,7 +4,7 @@ services:
     runtime: node
     region: singapore
     plan: free
-    buildCommand: npm install && npm run build --workspace backend
+    buildCommand: npm install --include=dev && npm run build --workspace backend
     startCommand: npm run start --workspace backend
     healthCheckPath: /api/health
     autoDeployTrigger: checksPass
@@ -25,7 +25,7 @@ services:
   - type: web
     name: finflow-web
     runtime: static
-    buildCommand: npm install && npm run build --workspace frontend
+    buildCommand: npm install --include=dev && npm run build --workspace frontend
     staticPublishPath: frontend/dist
     autoDeployTrigger: checksPass
     envVars:
