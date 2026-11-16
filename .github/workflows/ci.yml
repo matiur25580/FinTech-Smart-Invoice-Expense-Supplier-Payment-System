@@ -21,7 +21,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
       # The repository currently has no root package-lock.json, so npm ci
       # cannot run until a lockfile is committed.
       - name: Install workspace dependencies
