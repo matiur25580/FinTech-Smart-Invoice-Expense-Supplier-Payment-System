@@ -37,7 +37,8 @@ Admin and Accountant manage finance records. Employees submit expenses and see o
 - [x] Client/supplier creation and listing endpoints
 - [x] Invoice calculation and transactional payment recording
 - [x] Expense submission/review, dashboard aggregates and audit endpoint
-- [ ] Full CRUD screens, supplier bills/payments and supplier portal
+- [x] Supplier bill creation/listing and transactional supplier payments
+- [ ] Full CRUD screens and supplier self-service portal
 - [ ] PDF invoices, email delivery and scheduled due reminders
 - [ ] Refresh token rotation/revocation, automated tests, CI and deployment
 
