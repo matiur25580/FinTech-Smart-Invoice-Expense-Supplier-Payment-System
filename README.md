@@ -1,25 +1,45 @@
 # FinTech Smart Invoice, Expense & Supplier Payment System
 
-A full-stack accounting platform for small businesses. The project is being built in phased, reviewable commits. See the roadmap and setup notes below.
+A finance operations platform for small businesses. **This is accounting software, not a marketplace.** Clients owe the business money against sales invoices; suppliers are parties the business pays for rent, utilities, materials and services.
 
-## Product scope
+## Stack
+- Frontend: React 18, Vite, TypeScript, Recharts, Lucide
+- Backend: Node.js, Express, TypeScript, Zod, JWT, bcrypt
+- Database: MongoDB Atlas + Mongoose
+- Security: Helmet, CORS, rate limiting, role middleware
+- Hosting target: Vercel (frontend), Render (API), MongoDB Atlas
 
-- Sales invoices, client receipts and accounts receivable
-- Supplier bills, supplier payments and accounts payable
-- Expense submission and approval
-- Role-based access for Admin, Accountant, Supplier and Employee
-- Financial dashboard, audit trail, PDF invoices and email reminders
+## Run locally
+1. Install Node.js 20+ and MongoDB. MongoDB must run as a replica set for payment transactions.
+2. Copy `backend/.env.example` to `backend/.env`; set a MongoDB URI and two independent JWT secrets of at least 32 characters.
+3. Run `npm install` at repository root.
+4. Run `npm run dev`.
+5. Frontend runs at Vite's local URL; API health is at `http://localhost:4000/api/health`.
 
-## Architecture
-
-- `frontend/`: React, Vite, TypeScript, Tailwind CSS
-- `backend/`: Node.js, Express, TypeScript, Mongoose
-- MongoDB Atlas for persistence
+## API currently included
+- POST /api/auth/register — public registration always creates Employee
+- POST /api/auth/login and POST /api/auth/refresh
+- GET/POST /api/clients and GET/POST /api/suppliers (Admin/Accountant)
+- GET/POST /api/invoices (Admin/Accountant)
+- POST /api/invoices/:id/payments (transactional receipt and balance update)
+- GET/POST /api/expenses; PATCH /api/expenses/:id/review
+- GET /api/dashboard; GET /api/audit-logs
 
 ## Financial integrity
+All money is stored as integer paise and converted for display. Tax and discount are calculated on the server; this implementation applies discount before tax. Payment creation, invoice balance update and audit entry run inside one MongoDB transaction. A payment greater than the outstanding balance is rejected. Public registration cannot assign privileged roles.
 
-All monetary input is validated and calculations are performed on the server in integer minor units (paise). Payment creation and invoice balance updates are transactional. Supplier access is scoped to the supplier account linked to the authenticated user.
+## Roles
+Admin and Accountant manage finance records. Employees submit expenses and see only their own. Supplier portal and supplier bill/payment workflows are next in the roadmap; sales invoices are not exposed to supplier accounts.
 
-## Development status
+## Roadmap
+- [x] Repository and responsive dashboard foundation
+- [x] API bootstrap, authentication, role middleware and core data models
+- [x] Client/supplier creation and listing endpoints
+- [x] Invoice calculation and transactional payment recording
+- [x] Expense submission/review, dashboard aggregates and audit endpoint
+- [ ] Full CRUD screens, supplier bills/payments and supplier portal
+- [ ] PDF invoices, email delivery and scheduled due reminders
+- [ ] Refresh token rotation/revocation, automated tests, CI and deployment
 
-Initial foundation: repository structure, API foundation, authentication, role guards, financial domain models and core UI. Production deployment requires environment secrets, MongoDB replica-set support for transactions, email credentials and hosting configuration.
+## Production checklist
+Do not commit secrets. Configure HTTPS, refresh-token rotation/revocation, strict resource ownership checks, backups, monitoring and a replica-set database. Dashboard values are illustrative demo data until wired to the API. This is a development project, not certified accounting or tax software.
