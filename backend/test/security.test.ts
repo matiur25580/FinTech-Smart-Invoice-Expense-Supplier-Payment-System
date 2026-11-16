@@ -1,0 +1,9 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {clearRefreshCookieHeader,generateRefreshToken,hashRefreshToken,isTrustedOrigin,readRefreshCookieHeader,refreshCookieHeader} from "../src/security.js";
+test("generates high-entropy opaque refresh tokens and stores only deterministic hashes",()=>{const a=generateRefreshToken(),b=generateRefreshToken();assert.notEqual(a,b);assert.equal(a.length,64);assert.match(hashRefreshToken(a),/^[a-f0-9]{64}$/);assert.notEqual(hashRefreshToken(a),a);assert.equal(hashRefreshToken(a),hashRefreshToken(a));});
+test("sets HttpOnly production cookies with Secure and SameSite=None",()=>{const header=refreshCookieHeader("abc+123",true);assert.match(header,/HttpOnly/);assert.match(header,/Secure/);assert.match(header,/SameSite=None/);assert.match(header,/Path=\/api\/auth/);assert.match(header,/abc%2B123/);});
+test("uses Lax cookies in local development",()=>{const header=refreshCookieHeader("abc",false);assert.match(header,/SameSite=Lax/);assert.doesNotMatch(header,/Secure/);});
+test("clears refresh cookie using matching path and production attributes",()=>{const header=clearRefreshCookieHeader(true);assert.match(header,/Max-Age=0/);assert.match(header,/HttpOnly/);assert.match(header,/Secure/);assert.match(header,/Path=\/api\/auth/);});
+test("reads only the refresh cookie and safely decodes values",()=>{assert.equal(readRefreshCookieHeader("other=x; finflow.refresh=hello%2Bworld"),"hello+world");assert.equal(readRefreshCookieHeader("other=x"),null);assert.equal(readRefreshCookieHeader("finflow.refresh=%E0%A4%A"),null);});
+test("accepts only the configured origin",()=>{assert.equal(isTrustedOrigin("https://app.example.com","https://app.example.com"),true);assert.equal(isTrustedOrigin("https://evil.example","https://app.example.com"),false);assert.equal(isTrustedOrigin(undefined,"https://app.example.com"),false);assert.equal(isTrustedOrigin("not a url","https://app.example.com"),false);});

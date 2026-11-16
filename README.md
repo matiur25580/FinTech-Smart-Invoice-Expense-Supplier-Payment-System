@@ -46,5 +46,33 @@ Safe edit/delete for clients, suppliers and pending expenses; unpaid invoices an
 - [x] Email invoices to the client contact using configured SMTP
 - [x] Daily scheduled overdue reminders with per-invoice/per-day deduplication
 - [x] Rotating, revocable refresh sessions and HttpOnly cookie storage (current-session and all-session logout)
-- [ ] Automated backend tests and CI verification
+- [x] Automated backend unit tests for finance calculations and refresh-session security helpers
+- [x] CI runs backend tests before production builds
 - [ ] Deployment configuration and production rollout
+
+## Product visuals
+
+The following original illustrations show the main FinFlow screens and workflows. They are product concept visuals for documentation, not screenshots of a deployed production instance.
+
+<table>
+<tr>
+<td width="50%"><img src="docs/images/01-finance-dashboard.svg" alt="FinFlow finance dashboard" width="100%"/><p align="center"><strong>1. Finance dashboard</strong><br/>Income, expenses and receivables at a glance.</p></td>
+<td width="50%"><img src="docs/images/02-sales-invoices.svg" alt="Sales invoice workspace" width="100%"/><p align="center"><strong>2. Sales invoices</strong><br/>Customer billing and invoice status tracking.</p></td>
+</tr>
+<tr>
+<td><img src="docs/images/03-invoice-breakdown.svg" alt="Invoice detail and PDF layout" width="100%"/><p align="center"><strong>3. Invoice details</strong><br/>Line items, tax, discounts and balance due.</p></td>
+<td><img src="docs/images/04-expense-approvals.svg" alt="Expense review workspace" width="100%"/><p align="center"><strong>4. Expense approvals</strong><br/>Employee submissions and finance review.</p></td>
+</tr>
+<tr>
+<td><img src="docs/images/05-supplier-payables.svg" alt="Supplier payables workspace" width="100%"/><p align="center"><strong>5. Supplier payables</strong><br/>Bills owed to service providers and vendors.</p></td>
+<td><img src="docs/images/06-client-directory.svg" alt="Client directory" width="100%"/><p align="center"><strong>6. Client directory</strong><br/>Customer records linked to sales invoices.</p></td>
+</tr>
+<tr>
+<td><img src="docs/images/07-supplier-portal.svg" alt="Supplier portal account" width="100%"/><p align="center"><strong>7. Supplier portal</strong><br/>Supplier-scoped bill and payment visibility.</p></td>
+<td><img src="docs/images/08-payment-tracking.svg" alt="Payment tracking" width="100%"/><p align="center"><strong>8. Payment tracking</strong><br/>Receipts, payment methods and outstanding balances.</p></td>
+</tr>
+<tr>
+<td><img src="docs/images/09-audit-timeline.svg" alt="Audit activity timeline" width="100%"/><p align="center"><strong>9. Audit activity</strong><br/>Traceable records of important finance actions.</p></td>
+<td><img src="docs/images/10-secure-architecture.svg" alt="Secure authentication architecture" width="100%"/><p align="center"><strong>10. Secure sessions</strong><br/>Role checks, origin validation and refresh-token rotation.</p></td>
+</tr>
+</table>
