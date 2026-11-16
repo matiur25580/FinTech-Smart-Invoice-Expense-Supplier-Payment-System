@@ -31,13 +31,14 @@ Includes login/register, role-aware navigation, live dashboard aggregates, searc
 Money is stored as integer paise. Invoice tax and discount are calculated server-side (discount before tax). Payment, balance update and audit entry use MongoDB transactions. Overpayments are rejected. Public registration cannot assign privileged roles.
 
 ## Limitations / production work
-Safe edit/delete for clients, suppliers and pending expenses (posted invoices, bills and reviewed expenses are protected); invoice PDF/email, due reminders, refresh-token rotation/revocation, secure token storage, complete automated API tests and production deployment remain unfinished. The current frontend stores tokens in localStorage and is a development foundation, not production-hardened. This is not certified accounting or tax software.
+Safe edit/delete for clients, suppliers and pending expenses; unpaid invoices and supplier bills can be edited/deleted, while paid records and reviewed expenses are protected; invoice PDF/email, due reminders, refresh-token rotation/revocation, secure token storage, complete automated API tests and production deployment remain unfinished. The current frontend stores tokens in localStorage and is a development foundation, not production-hardened. This is not certified accounting or tax software.
 
 ## Roadmap
 - [x] Core API, authentication, finance models and transactional payment endpoints
 - [x] Live frontend auth, dashboard, searchable lists, create forms and payment/approval actions
 - [x] Live frontend integration (PR #1)
-- [x] Admin-provisioned supplier portal login with supplier-scoped bill listing\n- [x] Safe edit/delete for clients, suppliers and pending expenses
+- [x] Admin-provisioned supplier portal login with supplier-scoped bill listing
+- [x] Safe edit/delete for clients, suppliers, pending expenses, and unpaid invoices/supplier bills
 - [ ] PDF invoices, email and scheduled due reminders
 - [ ] Token rotation/revocation and secure token storage
 - [ ] Automated backend tests and CI verification
