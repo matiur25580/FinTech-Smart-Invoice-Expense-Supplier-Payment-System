@@ -13,7 +13,8 @@ A finance operations platform for small businesses. **This is accounting softwar
 2. Copy `backend/.env.example` to `backend/.env`; configure MongoDB and two independent JWT secrets of at least 32 characters.
 3. Run `npm install` at repository root, then `npm run dev`.
 4. API health: `http://localhost:4000/api/health`.
-5. For a hosted API, set frontend `VITE_API_URL` to its origin (without a trailing slash).\n6. To send invoice emails and enable reminders, configure `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, and `SMTP_FROM` in the backend environment. Never commit real SMTP credentials. The daily overdue reminder runs at `REMINDER_CRON` (default 09:00) in `REMINDER_TIMEZONE` (default `Asia/Kolkata`).
+5. For a hosted API, set frontend `VITE_API_URL` to its origin (without a trailing slash).
+6. To send invoice emails and enable reminders, configure `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, and `SMTP_FROM` in the backend environment. Never commit real SMTP credentials. The daily overdue reminder runs at `REMINDER_CRON` (default 09:00) in `REMINDER_TIMEZONE` (default `Asia/Kolkata`).
 
 ## Frontend integration
 Includes login/register, role-aware navigation, live dashboard aggregates, searchable finance lists, client/supplier/expense/invoice/supplier-bill forms, expense approvals, and customer/supplier payment actions. Registration creates an Employee account; elevated roles must be granted by an administrator. The app uses the existing API endpoints and requires a running backend.
@@ -22,7 +23,9 @@ Includes login/register, role-aware navigation, live dashboard aggregates, searc
 - POST /api/auth/register, /api/auth/login, POST /api/auth/refresh
 - GET/POST /api/clients and GET/POST /api/suppliers
 - POST /api/suppliers/:id/portal-account (Admin only; creates a linked supplier login)
-- GET/POST /api/invoices; POST /api/invoices/:id/payments\n- GET /api/invoices/:id/pdf (authenticated PDF download)\n- POST /api/invoices/:id/email (emails the PDF to the client email on file)
+- GET/POST /api/invoices; POST /api/invoices/:id/payments
+- GET /api/invoices/:id/pdf (authenticated PDF download)
+- POST /api/invoices/:id/email (emails the PDF to the client email on file)
 - GET/POST /api/expenses; PATCH /api/expenses/:id/review
 - GET /api/dashboard; GET /api/audit-logs
 - GET/POST /api/supplier-bills; POST /api/supplier-bills/:id/payments
@@ -39,7 +42,9 @@ Safe edit/delete for clients, suppliers and pending expenses; unpaid invoices an
 - [x] Live frontend integration (PR #1)
 - [x] Admin-provisioned supplier portal login with supplier-scoped bill listing
 - [x] Safe edit/delete for clients, suppliers, pending expenses, and unpaid invoices/supplier bills
-- [x] PDF invoice generation and authenticated download\n- [x] Email invoices to the client contact using configured SMTP\n- [x] Daily scheduled overdue reminders with per-invoice/per-day deduplication
+- [x] PDF invoice generation and authenticated download
+- [x] Email invoices to the client contact using configured SMTP
+- [x] Daily scheduled overdue reminders with per-invoice/per-day deduplication
 - [ ] Token rotation/revocation and secure token storage
 - [ ] Automated backend tests and CI verification
 - [ ] Deployment configuration and production rollout
