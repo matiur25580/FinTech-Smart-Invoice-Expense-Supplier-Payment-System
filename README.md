@@ -10,7 +10,7 @@ A finance operations platform for small businesses. **This is accounting softwar
 
 ## Run locally
 1. Install Node.js 20+ and MongoDB. MongoDB must run as a replica set for payment transactions.
-2. Copy `backend/.env.example` to `backend/.env`; configure MongoDB and two independent JWT secrets of at least 32 characters.
+2. Copy `backend/.env.example` to `backend/.env`; configure MongoDB and a JWT access secret of at least 32 characters. Refresh sessions use random opaque tokens stored only as SHA-256 hashes in MongoDB.
 3. Run `npm install` at repository root, then `npm run dev`.
 4. API health: `http://localhost:4000/api/health`.
 5. For a hosted API, set frontend `VITE_API_URL` to its origin (without a trailing slash).
@@ -20,7 +20,7 @@ A finance operations platform for small businesses. **This is accounting softwar
 Includes login/register, role-aware navigation, live dashboard aggregates, searchable finance lists, client/supplier/expense/invoice/supplier-bill forms, expense approvals, and customer/supplier payment actions. Registration creates an Employee account; elevated roles must be granted by an administrator. The app uses the existing API endpoints and requires a running backend.
 
 ## API
-- POST /api/auth/register, /api/auth/login, POST /api/auth/refresh
+- POST /api/auth/register and /api/auth/login (refresh token set as an HttpOnly cookie); POST /api/auth/refresh rotates the cookie-backed session; POST /api/auth/logout revokes the current session; POST /api/auth/logout-all revokes all sessions for that account
 - GET/POST /api/clients and GET/POST /api/suppliers
 - POST /api/suppliers/:id/portal-account (Admin only; creates a linked supplier login)
 - GET/POST /api/invoices; POST /api/invoices/:id/payments
@@ -34,7 +34,7 @@ Includes login/register, role-aware navigation, live dashboard aggregates, searc
 Money is stored as integer paise. Invoice tax and discount are calculated server-side (discount before tax). Payment, balance update and audit entry use MongoDB transactions. Overpayments are rejected. Public registration cannot assign privileged roles.
 
 ## Limitations / production work
-Safe edit/delete for clients, suppliers and pending expenses; unpaid invoices and supplier bills can be edited/deleted, while paid records and reviewed expenses are protected; refresh-token rotation/revocation, secure token storage, complete automated API tests and production deployment remain unfinished. SMTP must be configured before email delivery or scheduled reminders can run. The current frontend stores tokens in localStorage and is a development foundation, not production-hardened. This is not certified accounting or tax software.
+Safe edit/delete for clients, suppliers and pending expenses; unpaid invoices and supplier bills can be edited/deleted, while paid records and reviewed expenses are protected; complete automated API tests and production deployment remain unfinished. Access tokens are held in frontend memory; refresh tokens are opaque, rotated on use, stored as hashes server-side, and transported in HttpOnly cookies. In production, configure HTTPS and set `CLIENT_URL` to the exact frontend origin; the API uses `SameSite=None; Secure` cookies and validates the request Origin. SMTP must be configured before email delivery or scheduled reminders can run. This security improvement is not a substitute for a security review. This is not certified accounting or tax software.
 
 ## Roadmap
 - [x] Core API, authentication, finance models and transactional payment endpoints
@@ -45,6 +45,6 @@ Safe edit/delete for clients, suppliers and pending expenses; unpaid invoices an
 - [x] PDF invoice generation and authenticated download
 - [x] Email invoices to the client contact using configured SMTP
 - [x] Daily scheduled overdue reminders with per-invoice/per-day deduplication
-- [ ] Token rotation/revocation and secure token storage
+- [x] Rotating, revocable refresh sessions and HttpOnly cookie storage (current-session and all-session logout)
 - [ ] Automated backend tests and CI verification
 - [ ] Deployment configuration and production rollout
