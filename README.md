@@ -31,7 +31,7 @@ Includes login/register, role-aware navigation, live dashboard aggregates, searc
 - GET/POST /api/supplier-bills; POST /api/supplier-bills/:id/payments
 
 ## Financial integrity
-Money is stored as integer paise. Invoice tax and discount are calculated server-side (discount before tax). Payment, balance update and audit entry use MongoDB transactions. Overpayments are rejected. Public registration cannot assign privileged roles.
+Money is stored as integer paise. Invoice tax and discount are calculated server-side (discount before tax). Payment, balance update and audit entry use MongoDB transactions. Overpayments and sub-paise payment/expense amounts are rejected. Expense access is limited to Admin, Accountant and Employee roles; employees can only view their own submissions, and supplier portal accounts cannot access or create expenses. Public registration cannot assign privileged roles.
 
 ## Limitations / production work
 Safe edit/delete for clients, suppliers and pending expenses; unpaid invoices and supplier bills can be edited/deleted, while paid records and reviewed expenses are protected. Finance/security helper unit tests and CI are in place, but API integration tests, live staging verification and production rollout remain unfinished. Access tokens are held in frontend memory; refresh tokens are opaque, rotated on use, stored as hashes server-side, and transported in HttpOnly cookies. In production, configure HTTPS and set `CLIENT_URL` to the exact frontend origin; the API uses `SameSite=None; Secure` cookies and validates the request Origin. SMTP must be configured before email delivery or scheduled reminders can run. This security improvement is not a substitute for a security review. This is not certified accounting or tax software.
