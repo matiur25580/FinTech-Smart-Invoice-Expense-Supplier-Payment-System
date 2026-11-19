@@ -138,3 +138,9 @@ A carefully arranged, single-column gallery of the core FinFlow screens and work
 *Role checks, trusted-origin validation and rotating refresh sessions.*
 
 </div>
+
+## Live Demo
+
+**Frontend:** [Open Live Demo](https://fin-tech-smart-invoice-expense-supp.vercel.app)
+
+> This link points to the deployed frontend. Features that depend on the API, database, email, file storage, or other external services may require the corresponding backend services and environment variables to be configured. Use test data only; this demo is not a production service.
