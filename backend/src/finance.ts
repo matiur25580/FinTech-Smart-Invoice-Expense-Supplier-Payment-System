@@ -11,6 +11,9 @@ export function toPaise(amount:number):number{
  if(!Number.isFinite(amount)||amount<0)throw new Error("Invalid amount");
  return assertSafePaise(Math.round((amount+Number.EPSILON)*100));
 }
+export function addPaise(...values:number[]):number{
+ return values.reduce((sum,value)=>assertSafePaise(sum+assertSafePaise(value)),0);
+}
 export function fromPaise(amount:number|null|undefined):number{return Number(((amount??0)/100).toFixed(2));}
 export function calculateInvoiceTotals(items:InvoiceLineInput[],taxRate:number,discountRate:number):InvoiceTotals{
  if(!Array.isArray(items)||items.length===0)throw new Error("At least one invoice item is required");
