@@ -9,3 +9,7 @@ export function expenseStatusForRole(role: FinanceRole): "pending" | "approved" 
   if (role === "admin" || role === "accountant") return "approved";
   return null;
 }
+
+export function canReviewExpense(status: string, submittedBy: string, reviewerId: string): boolean {
+  return status === "pending" && submittedBy !== reviewerId;
+}
