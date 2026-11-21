@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {calculateInvoiceTotals,fromPaise,toPaise} from "../src/finance.js";
+import {addPaise,calculateInvoiceTotals,fromPaise,toPaise} from "../src/finance.js";
 test("converts rupees to integer paise without floating point drift",()=>{assert.equal(toPaise(0.1),10);assert.equal(toPaise(125.55),12555);assert.equal(fromPaise(12555),125.55);});
 test("rejects negative and non-finite monetary values",()=>{for(const value of [-0.01,Number.NaN,Number.POSITIVE_INFINITY])assert.throws(()=>toPaise(value),/Invalid amount/);});
 test("calculates subtotal, discount before tax, and total in paise",()=>{const result=calculateInvoiceTotals([{description:"Consulting",quantity:2,unitPrice:100},{description:"Support",quantity:1,unitPrice:50}],18,10);assert.equal(result.subtotalPaise,25000);assert.equal(result.discountPaise,2500);assert.equal(result.taxPaise,4050);assert.equal(result.totalPaise,26550);assert.deepEqual(result.lines.map(x=>x.lineTotalPaise),[20000,5000]);});
@@ -8,3 +8,6 @@ test("supports zero tax and zero discount",()=>{const result=calculateInvoiceTot
 test("rejects empty invoices, invalid rates, and invalid quantities",()=>{assert.throws(()=>calculateInvoiceTotals([],18,0));assert.throws(()=>calculateInvoiceTotals([{description:"x",quantity:1,unitPrice:1}],101,0));assert.throws(()=>calculateInvoiceTotals([{description:"x",quantity:0,unitPrice:1}],0,0));});
 test("rejects monetary values that cannot be represented safely in integer paise",()=>{assert.throws(()=>toPaise(Number.MAX_SAFE_INTEGER),/safe paise range/);assert.throws(()=>calculateInvoiceTotals([{description:"Large",quantity:Number.MAX_SAFE_INTEGER,unitPrice:1}],0,0),/safe paise range/);});
 test("rejects invoice totals that overflow the safe integer range",()=>{assert.throws(()=>calculateInvoiceTotals([{description:"A",quantity:1,unitPrice:50_000_000_000_000},{description:"B",quantity:1,unitPrice:50_000_000_000_000}],0,0),/safe paise range/);});
+
+test("adds supplier bill components using safe integer paise arithmetic",()=>{assert.equal(addPaise(12345,678),13023);assert.equal(addPaise(0,0),0);});
+test("rejects negative, fractional, and overflowing paise additions",()=>{assert.throws(()=>addPaise(-1,100),/safe paise range/);assert.throws(()=>addPaise(1.5,2),/safe paise range/);assert.throws(()=>addPaise(Number.MAX_SAFE_INTEGER,1),/safe paise range/);});
