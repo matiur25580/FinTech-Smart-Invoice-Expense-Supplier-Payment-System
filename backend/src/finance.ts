@@ -2,6 +2,7 @@ export type InvoiceLineInput={description:string;quantity:number;unitPrice:numbe
 export type InvoiceLineCalculated=InvoiceLineInput&{unitPricePaise:number;lineTotalPaise:number};
 export type InvoiceTotals={lines:InvoiceLineCalculated[];subtotalPaise:number;discountPaise:number;taxPaise:number;totalPaise:number};
 
+// Keep monetary arithmetic in integer paise to avoid floating-point currency rounding errors.
 function assertSafePaise(value:number):number{
  if(!Number.isSafeInteger(value)||value<0)throw new Error("Monetary value exceeds the safe paise range");
  return value;
