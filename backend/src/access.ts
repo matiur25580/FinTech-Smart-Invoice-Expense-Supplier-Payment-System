@@ -10,6 +10,7 @@ export function expenseStatusForRole(role: FinanceRole): "pending" | "approved" 
   return null;
 }
 
+// Enforce separation of duties: only pending expenses submitted by someone else may be reviewed.
 export function canReviewExpense(status: string, submittedBy: string, reviewerId: string): boolean {
   return status === "pending" && submittedBy !== reviewerId;
 }
