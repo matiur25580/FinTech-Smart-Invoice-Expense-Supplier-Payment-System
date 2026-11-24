@@ -1,6 +1,7 @@
 import {createHash,randomBytes} from "node:crypto";
 export const REFRESH_COOKIE="finflow.refresh";
 export const REFRESH_TTL_SECONDS=7*24*60*60;
+// Persist only a one-way digest of refresh tokens; the raw token is returned to the browser in an HttpOnly cookie.
 export const hashRefreshToken=(token:string)=>createHash("sha256").update(token).digest("hex");
 export const generateRefreshToken=()=>randomBytes(48).toString("base64url");
 export function refreshCookieHeader(token:string,production:boolean,ttlSeconds=REFRESH_TTL_SECONDS){const sameSite=production?"None":"Lax";return REFRESH_COOKIE+"="+encodeURIComponent(token)+"; Path=/api/auth; HttpOnly; SameSite="+sameSite+"; Max-Age="+ttlSeconds+(production?"; Secure":"");}
